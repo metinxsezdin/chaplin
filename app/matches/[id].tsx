@@ -26,6 +26,8 @@ interface Message {
   created_at: string;
   sender_id: string;
   match_id: string;
+  status: string;
+  read_at: string | null;
 }
 
 interface ChatUser {
@@ -103,10 +105,40 @@ export default function ChatModal() {
         schema: 'public',
         table: 'messages',
         filter: `match_id=eq.${id}`,
-      }, (payload) => {
+      }, async (payload) => {
         const newMessage = payload.new as Message;
+        
+        if (newMessage.sender_id !== user?.id) {
+          const currentTime = new Date().toISOString();
+          const { error: updateError } = await supabase
+            .from('messages')
+            .update({ 
+              status: 'read', 
+              read_at: currentTime 
+            })
+            .eq('id', newMessage.id);
+
+          if (!updateError) {
+            newMessage.status = 'read';
+            newMessage.read_at = currentTime;
+          }
+        }
+        
         setMessages(prev => [...prev, newMessage]);
         scrollToBottom();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `match_id=eq.${id}`,
+      }, (payload) => {
+        const updatedMessage = payload.new as Message;
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === updatedMessage.id ? updatedMessage : msg
+          )
+        );
       })
       .subscribe();
 
@@ -122,7 +154,31 @@ export default function ChatModal() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      const unreadMessages = (data || []).filter(
+        msg => msg.sender_id !== user?.id && (msg.status !== 'read' || !msg.read_at)
+      );
+
+      if (unreadMessages.length > 0) {
+        const currentTime = new Date().toISOString();
+        const { error: updateError } = await supabase
+          .from('messages')
+          .update({ 
+            status: 'read', 
+            read_at: currentTime 
+          })
+          .in('id', unreadMessages.map(msg => msg.id));
+
+        if (updateError) throw updateError;
+
+        setMessages(data.map(msg => 
+          unreadMessages.some(unread => unread.id === msg.id)
+            ? { ...msg, status: 'read', read_at: currentTime }
+            : msg
+        ));
+      } else {
+        setMessages(data || []);
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
@@ -157,9 +213,10 @@ export default function ChatModal() {
     }
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderMessage = ({ item, index }: { item: Message, index: number }) => {
     const isMyMessage = item.sender_id === user?.id;
     const messageDate = new Date(item.created_at);
+    const isLastMessage = index === messages.length - 1;
 
     return (
       <Animated.View 
@@ -185,12 +242,24 @@ export default function ChatModal() {
           ]}>
             {item.content}
           </Text>
-          <Text style={[
-            styles.messageTime,
-            { color: isMyMessage ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
-          ]}>
-            {format(messageDate, 'HH:mm')}
-          </Text>
+          {isMyMessage && isLastMessage && (
+            <View style={styles.statusContainer}>
+              <Text style={[
+                styles.messageTime,
+                { color: isMyMessage ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+              ]}>
+                {format(messageDate, 'HH:mm')}
+              </Text>
+              <Text style={[
+                styles.messageStatus,
+                { color: isMyMessage ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+              ]}>
+                {item.read_at ? '✓✓' : 
+                 item.status === 'delivered' ? '✓' : 
+                 '•'}
+              </Text>
+            </View>
+          )}
         </View>
       </Animated.View>
     );
@@ -214,7 +283,7 @@ export default function ChatModal() {
         <FlatList
           ref={flatListRef}
           data={messages}
-          renderItem={renderMessage}
+          renderItem={({ item, index }) => renderMessage({ item, index })}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.messagesList,
@@ -305,11 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
   },
-  messageTime: {
-    fontSize: 12,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
   avatar: {
     width: 32,
     height: 32,
@@ -348,5 +412,18 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+  },
+  messageTime: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  messageStatus: {
+    fontSize: 12,
   },
 }); 
