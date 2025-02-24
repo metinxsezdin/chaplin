@@ -15,7 +15,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { Rating } from '../../components/Rating';
+import { Rating } from '../../components/common/Rating';
 import { useAuth } from '../../contexts/auth';
 import { SharedElement } from 'react-navigation-shared-element';
 

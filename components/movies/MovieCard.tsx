@@ -11,12 +11,11 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 
-import { Movie, MovieDetails, getMovieDetails, getImageUrl } from '../lib/tmdb';
-import { Rating } from './Rating';
-import { useAuth } from '../contexts/auth';
-import { supabase } from '../lib/supabase';
-import { useTheme } from '../contexts/theme';
-import { TMDB_IMAGE_URL } from '../lib/tmdb';
+import { Movie, MovieDetails, getMovieDetails, getImageUrl, TMDB_IMAGE_URL } from '../../lib/tmdb';
+import { Rating } from '../common/Rating';
+import { useAuth } from '../../contexts/auth';
+import { supabase } from '../../lib/supabase';
+import { useTheme } from '../../contexts/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 100;

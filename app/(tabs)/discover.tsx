@@ -11,12 +11,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { PanGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
 import type { PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
-import MovieCard from '../../components/MovieCard';
+import MovieCard from '../../components/movies/MovieCard';
 import { Movie, getPopularMovies, getTopRatedMovies, getTrendingMovies, getUpcomingMovies } from '../../lib/tmdb';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/theme';
 import { MovieMatcher } from '../../lib/matching/matcher';
-import { Rating } from '../../components/Rating';
+import { Rating } from '../../components/common/Rating';
 
 const SWIPE_THRESHOLD = 100;
 const SCREEN_WIDTH = Dimensions.get('window').width;

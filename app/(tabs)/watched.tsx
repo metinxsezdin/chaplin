@@ -18,6 +18,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { TMDB_IMAGE_URL } from '../../lib/tmdb';
 import { movieGenres } from '../../lib/tmdb/genres';
+import { Rating } from '../../components/common/Rating';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 48) / 2;

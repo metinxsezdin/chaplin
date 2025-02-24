@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { TMDB_IMAGE_URL } from '../../lib/tmdb';
+import { MatchNotification } from '../../components/matches/MatchNotification';
 
 const { width } = Dimensions.get('window');
 
