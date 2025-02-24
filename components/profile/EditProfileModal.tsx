@@ -16,7 +16,6 @@ interface EditProfileModalProps {
   visible: boolean;
   onClose: () => void;
   currentUser: {
-    first_name: string;
     bio?: string;
   };
   onUpdate: () => void;
@@ -24,7 +23,6 @@ interface EditProfileModalProps {
 
 export function EditProfileModal({ visible, onClose, currentUser, onUpdate }: EditProfileModalProps) {
   const { colors } = useTheme();
-  const [firstName, setFirstName] = useState(currentUser.first_name);
   const [bio, setBio] = useState(currentUser.bio || '');
   const [loading, setLoading] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -49,7 +47,6 @@ export function EditProfileModal({ visible, onClose, currentUser, onUpdate }: Ed
       const { error } = await supabase
         .from('profiles')
         .update({
-          first_name: firstName,
           bio: bio,
           updated_at: new Date().toISOString(),
         })
@@ -94,20 +91,6 @@ export function EditProfileModal({ visible, onClose, currentUser, onUpdate }: Ed
           </View>
 
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-              <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                }]}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Enter your name"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Bio</Text>
               <TextInput
