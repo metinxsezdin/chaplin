@@ -58,7 +58,3 @@ A modern dating application built with React Native, Expo, and Supabase. This ap
 - Push Notifications (Expo)
 - Image Storage (Supabase Storage)
 - Geolocation Services
-
-## Database Schema
-
-### Profiles Table
