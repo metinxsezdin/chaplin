@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { useTheme } from '../../contexts/theme';
 import { supabase } from '../../lib/supabase';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -27,6 +27,17 @@ export function EditProfileModal({ visible, onClose, currentUser, onUpdate }: Ed
   const [firstName, setFirstName] = useState(currentUser.first_name);
   const [bio, setBio] = useState(currentUser.bio || '');
   const [loading, setLoading] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
 
   const handleSave = async () => {
     try {
@@ -57,16 +68,28 @@ export function EditProfileModal({ visible, onClose, currentUser, onUpdate }: Ed
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-        <View style={[styles.content, { backgroundColor: colors.surface }]}>
+        <Animated.View style={[
+          styles.content,
+          {
+            backgroundColor: colors.surface,
+            opacity: fadeAnim,
+            transform: [{
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              })
+            }]
+          }
+        ]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Edit Profile</Text>
             <TouchableOpacity onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+              <Text style={[{ color: colors.text, fontSize: 20 }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -114,7 +137,7 @@ export function EditProfileModal({ visible, onClose, currentUser, onUpdate }: Ed
               <Text style={styles.saveButtonText}>Save Changes</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

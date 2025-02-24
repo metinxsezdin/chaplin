@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Animated,
 } from 'react-native';
 import { useTheme } from '../../contexts/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/auth';
 
@@ -27,6 +27,17 @@ export function PrivacyModal({ visible, onClose, settings, onUpdate }: PrivacyMo
   const { colors } = useTheme();
   const { signOut } = useAuth();
   const [privacy, setPrivacy] = useState(settings);
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
 
   const handleToggle = async (key: keyof typeof settings) => {
     try {
@@ -39,13 +50,16 @@ export function PrivacyModal({ visible, onClose, settings, onUpdate }: PrivacyMo
         [key]: !privacy[key],
       };
 
+      const dbSettings = {
+        user_id: user.id,
+        profile_visible: newSettings.profileVisible,
+        show_ratings: newSettings.showRatings,
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from('privacy_settings')
-        .upsert({
-          user_id: user.id,
-          ...newSettings,
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(dbSettings);
 
       if (error) throw error;
       setPrivacy(newSettings);
@@ -84,16 +98,28 @@ export function PrivacyModal({ visible, onClose, settings, onUpdate }: PrivacyMo
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-        <View style={[styles.content, { backgroundColor: colors.surface }]}>
+        <Animated.View style={[
+          styles.content,
+          {
+            backgroundColor: colors.surface,
+            opacity: fadeAnim,
+            transform: [{
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              })
+            }]
+          }
+        ]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Privacy</Text>
             <TouchableOpacity onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+              <Text style={[{ color: colors.text, fontSize: 20 }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -130,13 +156,12 @@ export function PrivacyModal({ visible, onClose, settings, onUpdate }: PrivacyMo
               style={[styles.deleteButton, { backgroundColor: colors.error + '20' }]}
               onPress={handleDeleteAccount}
             >
-              <MaterialCommunityIcons name="delete" size={20} color={colors.error} />
               <Text style={[styles.deleteButtonText, { color: colors.error }]}>
                 Delete Account
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

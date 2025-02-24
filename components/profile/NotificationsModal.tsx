@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -6,9 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Switch,
+  Animated,
 } from 'react-native';
 import { useTheme } from '../../contexts/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 
 interface NotificationsModalProps {
@@ -25,6 +25,17 @@ interface NotificationsModalProps {
 export function NotificationsModal({ visible, onClose, settings, onUpdate }: NotificationsModalProps) {
   const { colors } = useTheme();
   const [notifications, setNotifications] = useState(settings);
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
 
   const handleToggle = async (key: keyof typeof settings) => {
     try {
@@ -37,13 +48,17 @@ export function NotificationsModal({ visible, onClose, settings, onUpdate }: Not
         [key]: !notifications[key],
       };
 
+      const dbSettings = {
+        user_id: user.id,
+        new_matches: newSettings.newMatches,
+        new_messages: newSettings.newMessages,
+        movie_suggestions: newSettings.movieSuggestions,
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from('notification_settings')
-        .upsert({
-          user_id: user.id,
-          ...newSettings,
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(dbSettings);
 
       if (error) throw error;
       setNotifications(newSettings);
@@ -56,16 +71,28 @@ export function NotificationsModal({ visible, onClose, settings, onUpdate }: Not
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-        <View style={[styles.content, { backgroundColor: colors.surface }]}>
+        <Animated.View style={[
+          styles.content,
+          {
+            backgroundColor: colors.surface,
+            opacity: fadeAnim,
+            transform: [{
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              })
+            }]
+          }
+        ]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
             <TouchableOpacity onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+              <Text style={[{ color: colors.text, fontSize: 20 }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -112,7 +139,7 @@ export function NotificationsModal({ visible, onClose, settings, onUpdate }: Not
               />
             </View>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
