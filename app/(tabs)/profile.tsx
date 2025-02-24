@@ -73,12 +73,9 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
-      loadUserGenres();
-      loadStats();
-    }
-    checkPermissions();
-  }, [user?.id]);
+    console.log('🔄 Initial useEffect triggered'); // Debug
+    loadUserData();
+  }, [user?.id]); // user.id değiştiğinde yeniden yükle
 
   const handleSignOut = async () => {
     setIsLoading(true);
@@ -278,18 +275,69 @@ export default function ProfileScreen() {
 
   const loadUserData = async () => {
     try {
+      console.log('🔍 Starting loadUserData...'); // Debug
+
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) return;
+      if (userError) {
+        console.error('❌ Auth error:', userError); // Debug
+        throw userError;
+      }
+      
+      if (!user) {
+        console.log('❌ No user found'); // Debug
+        return;
+      }
+
+      console.log('👤 User ID:', user.id); // Debug
 
       // Profil bilgilerini al
-      const { data: profile, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('❌ Profile fetch error:', profileError); // Debug
+        throw profileError;
+      }
+
+      console.log('📝 Raw profile data:', profileData); // Debug
+
+      if (profileData) {
+        // Avatar URL'ini kontrol et
+        if (profileData.avatar_url) {
+          console.log('🖼️ Found avatar_url:', profileData.avatar_url); // Debug
+          
+          // URL zaten tam ise doğrudan kullan
+          if (profileData.avatar_url.startsWith('http')) {
+            console.log('✅ Using existing full URL'); // Debug
+            setProfile(profileData);
+          } else {
+            console.log('🔄 Converting to full URL...'); // Debug
+            // Supabase storage URL'ini oluştur
+            const { data } = supabase
+              .storage
+              .from('avatars')
+              .getPublicUrl(profileData.avatar_url);
+            
+            console.log('🔗 Generated public URL:', data.publicUrl); // Debug
+            
+            const updatedProfile = {
+              ...profileData,
+              avatar_url: data.publicUrl
+            };
+            
+            console.log('✅ Setting profile with URL:', updatedProfile.avatar_url); // Debug
+            setProfile(updatedProfile);
+          }
+        } else {
+          console.log('⚠️ No avatar_url in profile data'); // Debug
+          setProfile(profileData);
+        }
+      } else {
+        console.log('⚠️ No profile data returned'); // Debug
+      }
 
       // Notification ayarlarını al
       const { data: notifications, error: notificationsError } = await supabase
@@ -320,9 +368,8 @@ export default function ProfileScreen() {
         });
       }
 
-      setProfile(profile);
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('❌ Error in loadUserData:', error);
     }
   };
 
@@ -421,73 +468,74 @@ export default function ProfileScreen() {
 
   const uploadAvatar = async (base64Image: string) => {
     try {
+      console.log('📤 Starting avatar upload...'); // Debug
       setUploading(true);
 
-      // Kullanıcı kontrolü
       if (!user?.id) {
+        console.log('❌ No user ID found for upload'); // Debug
         throw new Error('User not found');
       }
 
-      // Dosya adını oluştur
-      const fileName = `avatar-${user.id}-${Date.now()}.jpg`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}-${Date.now()}.jpg`;
+      console.log('📄 Generated filename:', fileName); // Debug
 
       // Base64'ü ArrayBuffer'a çevir
       const arrayBuffer = decode(base64Image);
+      console.log('✅ Converted base64 to ArrayBuffer'); // Debug
 
-      // Önce eski avatarı sil
-      if (profile?.avatar_url) {
-        const oldFilePath = profile.avatar_url.split('/').pop();
-        if (oldFilePath) {
-          await supabase.storage
-            .from('avatars')
-            .remove([`avatars/${oldFilePath}`]);
-        }
-      }
-
-      // Supabase Storage'a yükle
-      const { error: uploadError } = await supabase.storage
+      // Dosyayı yükle
+      console.log('📤 Uploading to Supabase storage...'); // Debug
+      const { error: uploadError } = await supabase
+        .storage
         .from('avatars')
-        .upload(filePath, arrayBuffer, {
+        .upload(fileName, arrayBuffer, {
           contentType: 'image/jpeg',
-          upsert: true,
+          upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('❌ Upload error:', uploadError); // Debug
+        throw uploadError;
+      }
 
-      // Public URL al
-      const { data: { publicUrl }, error: urlError } = await supabase.storage
+      console.log('✅ File uploaded successfully'); // Debug
+
+      // Public URL'i al
+      const { data } = supabase
+        .storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
-      if (urlError) throw urlError;
+      console.log('🔗 Generated public URL:', data.publicUrl); // Debug
 
       // Profili güncelle
-      const { data: updatedProfile, error: updateError } = await supabase
+      console.log('📝 Updating profile with new URL...'); // Debug
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
-          avatar_url: publicUrl,
+          avatar_url: data.publicUrl,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id)
-        .select()
-        .single();
+        .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Profile update error:', updateError); // Debug
+        throw updateError;
+      }
 
-      // Sadece profile state'ini güncelle
-      setProfile(updatedProfile);
-      
+      console.log('✅ Profile updated successfully'); // Debug
+
       // Profil verilerini yeniden yükle
       await loadUserData();
 
       Alert.alert('Success', 'Profile photo updated successfully');
 
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      console.error('❌ Error in uploadAvatar:', error);
       Alert.alert('Error', 'Failed to update profile photo');
     } finally {
       setUploading(false);
+      console.log('🏁 Upload process completed'); // Debug
     }
   };
 
@@ -507,24 +555,24 @@ export default function ProfileScreen() {
       marginBottom: 16,
       position: 'relative',
     },
-    avatarImage: {
-      width: 120,
-      height: 120,
-      borderRadius: 60,
+    avatar: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
       backgroundColor: colors.surface,
     },
     avatarPlaceholder: {
-      width: 120,
-      height: 120,
-      borderRadius: 60,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.primary,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    avatarText: {
-      color: 'white',
-      fontSize: 40,
-      fontWeight: 'bold',
+    uploadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 50,
     },
     editButton: {
       position: 'absolute',
@@ -746,17 +794,6 @@ export default function ProfileScreen() {
       fontSize: 16,
       fontWeight: '500',
     },
-    uploadingOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(255,255,255,0.8)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 60,
-    },
     editBadge: {
       position: 'absolute',
       right: 0,
@@ -824,6 +861,45 @@ export default function ProfileScreen() {
   // Okunmamış bildirim sayısı
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Avatar görüntüleme komponenti
+  const renderAvatar = () => {
+    console.log('🖼️ Rendering avatar component'); // Debug
+    console.log('📝 Current profile state:', profile); // Debug
+    console.log('🔗 Current avatar URL:', profile?.avatar_url); // Debug
+
+    return (
+      <View style={styles.avatarContainer}>
+        <TouchableOpacity onPress={pickImage} disabled={uploading}>
+          {profile?.avatar_url ? (
+            <Image
+              source={{ uri: profile.avatar_url }}
+              style={styles.avatar}
+              onLoadStart={() => console.log('🖼️ Image loading started')} // Debug
+              onLoad={() => console.log('✅ Image loaded successfully')} // Debug
+              onError={(e) => {
+                console.error('❌ Image loading error:', e.nativeEvent.error);
+                console.log('🔗 Failed URL:', profile.avatar_url);
+              }}
+            />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <MaterialCommunityIcons 
+                name="account" 
+                size={40} 
+                color={colors.textSecondary} 
+              />
+            </View>
+          )}
+          {uploading && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <ScrollView 
       style={styles.container}
@@ -832,36 +908,7 @@ export default function ProfileScreen() {
       }
     >
       <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity 
-            style={styles.avatarContainer} 
-            onPress={pickImage}
-            disabled={uploading}
-          >
-            {profile?.avatar_url ? (
-              <Image
-                source={{ uri: profile.avatar_url }}
-                style={styles.avatarImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
-                <Text style={styles.avatarText}>
-                  {profile?.first_name?.substring(0, 2).toUpperCase() || 'UP'}
-                </Text>
-              </View>
-            )}
-            {uploading ? (
-              <View style={styles.uploadingOverlay}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : (
-              <View style={styles.editBadge}>
-                <MaterialCommunityIcons name="camera" size={20} color="white" />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        {renderAvatar()}
         <Text style={styles.name}>{profile?.first_name || 'User'}</Text>
         <Text style={styles.phoneNumber}>{profile?.phone || 'No phone number'}</Text>
       </View>
