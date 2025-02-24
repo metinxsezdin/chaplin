@@ -1,6 +1,6 @@
-# Dating App - Find Your Match
+# Chaplin - Find Your Match
 
-A modern dating application built with React Native, Expo, and Supabase. This app helps users find potential matches based on shared interests, location, and preferences.
+A modern dating application built with React Native, Expo, and Supabase. This app helps users find potential matches based on shared interests about movies, location, and preferences.
 
 ## Features
 
