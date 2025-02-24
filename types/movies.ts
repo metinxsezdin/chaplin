@@ -13,10 +13,12 @@ export interface MovieData {
 
 export interface WatchedMovieData {
   movie_id: number;
-  movies: MovieData;
   rating?: number;
-  action: string;
-  created_at: string;
+  movies: {
+    tmdb_id?: number;
+    title: string;
+    poster_path: string | null;
+  };
 }
 
 export interface FilterOptions {

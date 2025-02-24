@@ -80,7 +80,7 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     setIsLoading(true);
     await signOut();
-    router.replace('/(auth)/phone-auth');
+    router.replace('/(auth)');  // Sadece /(auth) yeterli
   };
 
   const getInitials = (name: string) => {

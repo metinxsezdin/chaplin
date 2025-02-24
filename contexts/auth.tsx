@@ -1,78 +1,76 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
-import firebase from 'firebase/compat/app';
-
-interface User {
-  id: string;
-  phoneNumber: string | null;
-  firebase_uid: string;
-  first_name: string;
-}
+import type { Profile } from '../types/profile';
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
+  user: Profile | null;
   signOut: () => Promise<void>;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  signOut: async () => {},
+  isLoading: true
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Mevcut oturumu kontrol et
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+    checkUser();
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setUser(profile);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
     });
 
-    // Auth state değişikliklerini dinle
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
-  const signOut = async () => {
+  const checkUser = async () => {
     try {
-      // Sign out from Firebase
-      await auth.signOut();
-      // Sign out from Supabase (if needed)
-      await supabase.auth.signOut();
-      // The _layout.tsx will automatically redirect to phone-auth
-      // since the auth state change will trigger the useEffect
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setUser(profile);
+      }
     } catch (error) {
-      console.error('Error signing out:', error);
-      throw error; // Propagate error to handle it in the component
+      console.error('Error checking user:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={{ user, signOut, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+export const useAuth = () => useContext(AuthContext);
 
 // Styles must be defined after the StyleSheet import
 const styles = StyleSheet.create({

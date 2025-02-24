@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Rating } from './Rating';
+import { Rating } from '../common/Rating';
 import { WatchedMovieData } from '../types/movies';
 import { TMDB_IMAGE_URL } from '../lib/tmdb';
 import { useTheme } from '../contexts/theme';

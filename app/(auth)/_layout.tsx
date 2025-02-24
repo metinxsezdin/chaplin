@@ -4,7 +4,7 @@ export default function AuthLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen 
-        name="email-auth"
+        name="index"
         options={{
           title: 'Sign In',
         }}
@@ -22,5 +22,5 @@ export default function AuthLayout() {
 
 // Auth grubunun başlangıç sayfası
 export const unstable_settings = {
-  initialRouteName: 'email-auth',
+  initialRouteName: 'index',
 };
