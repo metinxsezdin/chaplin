@@ -217,12 +217,21 @@ export default function ProfileScreen() {
         }
       });
 
-      // Toplam film sayısı
-      stats.totalMovies = statsData.length;
+      // Toplam film sayısı (watchlist hariç)
+      stats.totalMovies = statsData.filter(i => i.action !== 'watchlist').length;
 
-      // Ortalama rating
-      const ratingsSum = statsData.reduce((sum, interaction) => sum + (interaction.rating || 0), 0);
-      stats.averageRating = stats.totalMovies > 0 ? ratingsSum / stats.totalMovies : 0;
+      // Ortalama rating - sadece izlenen ve beğenilen filmler için
+      const ratedMovies = statsData.filter(interaction => 
+        interaction.action === 'liked' || interaction.action === 'watched'
+      );
+      
+      const ratingsSum = ratedMovies.reduce((sum, interaction) => 
+        sum + (interaction.rating || 0), 0
+      );
+      
+      stats.averageRating = ratedMovies.length > 0 
+        ? ratingsSum / ratedMovies.length 
+        : 0;
 
       // Beğenilen filmler
       const likedMovies = statsData
