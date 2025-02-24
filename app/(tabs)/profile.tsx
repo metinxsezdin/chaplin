@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, RefreshControl, Dimensions, ActivityIndicator, Alert, Platform, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, RefreshControl, Dimensions, ActivityIndicator, Alert, Platform, Linking, StatusBar, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/auth';
@@ -540,15 +540,20 @@ export default function ProfileScreen() {
   };
 
   const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.surface, // StatusBar arkası renk
+    },
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
     header: {
-      paddingTop: 40,
-      paddingBottom: 20,
+      paddingVertical: 10,
       backgroundColor: colors.surface,
       alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     avatarContainer: {
       alignItems: 'center',
@@ -901,126 +906,138 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      <View style={styles.header}>
-        {renderAvatar()}
-        <Text style={styles.name}>{profile?.first_name || 'User'}</Text>
-        <Text style={styles.phoneNumber}>{profile?.phone || 'No phone number'}</Text>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{stats?.liked || 0}</Text>
-          <Text style={styles.statLabel}>Films Liked</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{stats?.averageRating.toFixed(1) || '0.0'}</Text>
-          <Text style={styles.statLabel}>Average Rating</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Liked Movies</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.recentMoviesContainer}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={colors.theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.surface}
+        translucent={Platform.OS === 'android'}
+      />
+      <View style={styles.container}>
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
         >
-          {stats?.recentMovies.map((movie, index) => (
-            <TouchableOpacity
-              key={`${movie.id}-${index}`}
-              style={styles.movieCard}
-              onPress={() => router.push({
-                pathname: '/movie/[id]',
-                params: { id: movie.id }
-              })}
+          <View style={styles.header}>
+            {renderAvatar()}
+            <Text style={styles.name}>{profile?.first_name || 'User'}</Text>
+            <Text style={styles.phoneNumber}>{profile?.phone || 'No phone number'}</Text>
+          </View>
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{stats?.liked || 0}</Text>
+              <Text style={styles.statLabel}>Films Liked</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{stats?.averageRating.toFixed(1) || '0.0'}</Text>
+              <Text style={styles.statLabel}>Average Rating</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Liked Movies</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recentMoviesContainer}
             >
-              <Image
-                source={{ 
-                  uri: movie.poster_path 
-                    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                    : 'https://via.placeholder.com/500x750'
-                }}
-                style={styles.moviePoster}
-              />
-              <View style={styles.movieInfo}>
-                <Text style={styles.movieTitle} numberOfLines={1}>
-                  {movie.title || 'Movie Not Found'}
-                </Text>
-                <View style={styles.ratingContainer}>
-                  <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
-                  <Text style={styles.ratingText}>{movie.rating.toFixed(1)}</Text>
-                </View>
-                <Text style={styles.watchDate}>
-                  {new Date(movie.created_at).toLocaleDateString()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+              {stats?.recentMovies.map((movie, index) => (
+                <TouchableOpacity
+                  key={`${movie.id}-${index}`}
+                  style={styles.movieCard}
+                  onPress={() => router.push({
+                    pathname: '/movie/[id]',
+                    params: { id: movie.id }
+                  })}
+                >
+                  <Image
+                    source={{ 
+                      uri: movie.poster_path 
+                        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                        : 'https://via.placeholder.com/500x750'
+                    }}
+                    style={styles.moviePoster}
+                  />
+                  <View style={styles.movieInfo}>
+                    <Text style={styles.movieTitle} numberOfLines={1}>
+                      {movie.title || 'Movie Not Found'}
+                    </Text>
+                    <View style={styles.ratingContainer}>
+                      <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
+                      <Text style={styles.ratingText}>{movie.rating.toFixed(1)}</Text>
+                    </View>
+                    <Text style={styles.watchDate}>
+                      {new Date(movie.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Favorite Movie Genres</Text>
+            <View style={styles.genreGrid}>
+              {movieGenres.map(genre => (
+                <TouchableOpacity
+                  key={genre.id}
+                  style={[
+                    styles.genreItem,
+                    selectedGenres.includes(genre.id) && styles.genreItemSelected
+                  ]}
+                  onPress={() => toggleGenre(genre.id)}
+                  disabled={loadingGenres}
+                >
+                  <Text style={[
+                    styles.genreText,
+                    selectedGenres.includes(genre.id) && styles.genreTextSelected
+                  ]}>
+                    {genre.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {renderSettings()}
+
+          <EditProfileModal
+            visible={showEditProfile}
+            onClose={() => setShowEditProfile(false)}
+            currentUser={{
+              first_name: profile?.first_name || '',
+              bio: profile?.bio,
+            }}
+            onUpdate={loadUserData}
+          />
+
+          <NotificationsModal
+            visible={showNotifications}
+            onClose={() => setShowNotifications(false)}
+            settings={notificationSettings}
+            onUpdate={() => {
+              loadUserData();
+              // Notification ayarlarını yeniden yükle
+            }}
+          />
+
+          <PrivacyModal
+            visible={showPrivacy}
+            onClose={() => setShowPrivacy(false)}
+            settings={privacySettings}
+            onUpdate={() => {
+              loadUserData();
+              // Privacy ayarlarını yeniden yükle
+            }}
+          />
         </ScrollView>
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Favorite Movie Genres</Text>
-        <View style={styles.genreGrid}>
-          {movieGenres.map(genre => (
-            <TouchableOpacity
-              key={genre.id}
-              style={[
-                styles.genreItem,
-                selectedGenres.includes(genre.id) && styles.genreItemSelected
-              ]}
-              onPress={() => toggleGenre(genre.id)}
-              disabled={loadingGenres}
-            >
-              <Text style={[
-                styles.genreText,
-                selectedGenres.includes(genre.id) && styles.genreTextSelected
-              ]}>
-                {genre.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {renderSettings()}
-
-      <EditProfileModal
-        visible={showEditProfile}
-        onClose={() => setShowEditProfile(false)}
-        currentUser={{
-          first_name: profile?.first_name || '',
-          bio: profile?.bio,
-        }}
-        onUpdate={loadUserData}
-      />
-
-      <NotificationsModal
-        visible={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        settings={notificationSettings}
-        onUpdate={() => {
-          loadUserData();
-          // Notification ayarlarını yeniden yükle
-        }}
-      />
-
-      <PrivacyModal
-        visible={showPrivacy}
-        onClose={() => setShowPrivacy(false)}
-        settings={privacySettings}
-        onUpdate={() => {
-          loadUserData();
-          // Privacy ayarlarını yeniden yükle
-        }}
-      />
-    </ScrollView>
+    </SafeAreaView>
   );
 }

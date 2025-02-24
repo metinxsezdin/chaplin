@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator, Dimensions, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ActivityIndicator, Dimensions, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback, Platform, StatusBar, SafeAreaView } from 'react-native';
 import { useAuth } from '../../contexts/auth';
 import { supabase } from '../../lib/supabase';
 import Animated, {
@@ -309,6 +309,10 @@ export default function DiscoverScreen() {
   }));
 
   const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -318,6 +322,7 @@ export default function DiscoverScreen() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 20,
+      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     cardWrapper: {
       flex: 1,
@@ -327,7 +332,7 @@ export default function DiscoverScreen() {
     },
     cardContainer: {
       width: SCREEN_WIDTH * 0.9,
-      height: SCREEN_HEIGHT * 0.85,
+      height: SCREEN_HEIGHT * 0.8,
       maxWidth: 400,
       position: 'relative',
     },
@@ -398,106 +403,134 @@ export default function DiscoverScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          barStyle={colors.theme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+          translucent={Platform.OS === 'android'}
+        />
+        <View style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!movies.length) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <MaterialCommunityIcons 
-          name="movie-off" 
-          size={64} 
-          color={colors.textSecondary} 
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          barStyle={colors.theme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+          translucent={Platform.OS === 'android'}
         />
-        <Text style={[styles.noContentTitle, { color: colors.text }]}>
-          No Movies Available
-        </Text>
-        <Text style={[styles.noContentSubtitle, { color: colors.textSecondary }]}>
-          Please try again later
-        </Text>
-      </View>
+        <View style={[styles.container, styles.loadingContainer]}>
+          <MaterialCommunityIcons 
+            name="movie-off" 
+            size={64} 
+            color={colors.textSecondary} 
+          />
+          <Text style={[styles.noContentTitle, { color: colors.text }]}>
+            No Movies Available
+          </Text>
+          <Text style={[styles.noContentSubtitle, { color: colors.textSecondary }]}>
+            Please try again later
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (currentIndex >= movies.length) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.errorText}>Loading more movies...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          barStyle={colors.theme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+          translucent={Platform.OS === 'android'}
+        />
+        <View style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.errorText}>Loading more movies...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.content}>
-          <View style={styles.cardWrapper}>
-            <View style={styles.cardContainer}>
-              {currentIndex + 1 < movies.length && (
-                <View style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
-                  <MovieCard
-                    movie={movies[currentIndex + 1]}
-                    onAction={handleMovieAction}
-                    isAnimating={isAnimating}
-                  />
-                </View>
-              )}
-              {currentIndex < movies.length && (
-                <PanGestureHandler onGestureEvent={gestureHandler}>
-                  <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 1 }, currentCardStyle]}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={colors.theme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+        translucent={Platform.OS === 'android'}
+      />
+      <View style={styles.container}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View style={styles.content}>
+            <View style={styles.cardWrapper}>
+              <View style={styles.cardContainer}>
+                {currentIndex + 1 < movies.length && (
+                  <View style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
                     <MovieCard
-                      movie={movies[currentIndex]}
+                      movie={movies[currentIndex + 1]}
                       onAction={handleMovieAction}
                       isAnimating={isAnimating}
                     />
-                  </Animated.View>
-                </PanGestureHandler>
-              )}
+                  </View>
+                )}
+                {currentIndex < movies.length && (
+                  <PanGestureHandler onGestureEvent={gestureHandler}>
+                    <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 1 }, currentCardStyle]}>
+                      <MovieCard
+                        movie={movies[currentIndex]}
+                        onAction={handleMovieAction}
+                        isAnimating={isAnimating}
+                      />
+                    </Animated.View>
+                  </PanGestureHandler>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </GestureHandlerRootView>
+        </GestureHandlerRootView>
 
-      <Modal
-        visible={showRating}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={handleSkip}
-      >
-        <View style={styles.ratingModalContainer}>
-          <View 
-            style={[
-              styles.ratingModalContent, 
-              { backgroundColor: colors.surface }
-            ]}
-          >
-            <Text style={[styles.ratingTitle, { color: colors.text }]}>
-              Rate this movie
-            </Text>
-            <View style={styles.ratingContainer}>
-              <Rating
-                rating={currentRating}
-                onRate={handleRating}
-                size={44}
-                disabled={isAnimating}
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={handleSkip}
+        <Modal
+          visible={showRating}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={handleSkip}
+        >
+          <View style={styles.ratingModalContainer}>
+            <View 
+              style={[
+                styles.ratingModalContent, 
+                { backgroundColor: colors.surface }
+              ]}
             >
-              <Text style={[styles.skipText, { color: colors.textSecondary }]}>
-                Skip
+              <Text style={[styles.ratingTitle, { color: colors.text }]}>
+                Rate this movie
               </Text>
-            </TouchableOpacity>
+              <View style={styles.ratingContainer}>
+                <Rating
+                  rating={currentRating}
+                  onRate={handleRating}
+                  size={44}
+                  disabled={isAnimating}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={handleSkip}
+              >
+                <Text style={[styles.skipText, { color: colors.textSecondary }]}>
+                  Skip
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
